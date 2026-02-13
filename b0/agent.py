@@ -1,7 +1,10 @@
 import copy
 import os
+import logging
 from pathlib import Path
 from . import llm
+
+logger = logging.getLogger(__name__)
 
 class Agent:
     def __init__(self, workspace: str = ".", messages=None, parent=None, purpose: str = ""):
@@ -19,6 +22,7 @@ class Agent:
         for name in ["SOUL.md", "AGENT.md"]:
             path = self.workspace / name
             if path.exists():
+                logger.info(f"Loading system prompt from {path}")
                 self.messages.append({"role": "system", "content": path.read_text()})
 
     def fork(self, purpose: str = ""):

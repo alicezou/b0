@@ -2,9 +2,12 @@ import typer
 import asyncio
 import os
 import shutil
+import logging
 from pathlib import Path
 from importlib import resources
 from .agent import Agent
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 app = typer.Typer()
 
@@ -26,6 +29,12 @@ def chat(workspace: str = typer.Option(".", help="Workspace directory for templa
     setup_workspace(workspace)
     agent = Agent(workspace=workspace)
     asyncio.run(agent.run())
+
+@app.command()
+def telegram(workspace: str = typer.Option(".", help="Workspace directory for templates")):
+    setup_workspace(workspace)
+    from .telegram import run_bot
+    run_bot(workspace)
 
 def main():
     app()

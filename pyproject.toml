@@ -14,7 +14,13 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-dependencies = ["typer", "python-dotenv", "litellm"]
+dependencies = [
+    "typer",
+    "python-dotenv",
+    "litellm",
+    "requests",
+    "python-telegram-bot",
+]
 
 [project.scripts]
 b0 = "b0.cli:main"

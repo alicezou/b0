@@ -1,6 +1,9 @@
 import litellm
 import requests
+import logging
 from . import config
+
+logger = logging.getLogger(__name__)
 
 litellm.set_verbose = False
 litellm.suppress_debug_info = True
@@ -12,9 +15,11 @@ class LLMConnector:
     @property
     def model(self):
         if config.DEFAULT_LLM_MODEL:
+            logger.info(f"Using hardcoded model: {config.DEFAULT_LLM_MODEL}")
             return config.DEFAULT_LLM_MODEL
         if not self._model:
             self._model = self._find_model()
+            logger.info(f"Discovery: using model {self._model}")
         return self._model
 
     def _find_model(self):
@@ -23,8 +28,13 @@ class LLMConnector:
             resp = requests.get(f"{base}/api/tags", timeout=1)
             if resp.status_code == 200:
                 models = [f"ollama/{x['name']}" for x in resp.json().get('models', [])]
-                if models: return models[0]
-        except: pass
+                if models: 
+                    logger.info(f"Ollama models found: {models}")
+                    return models[0]
+        except Exception as e:
+            logger.debug(f"Ollama discovery failed: {e}")
+        
+        logger.info("No local models found, falling back to gpt-4o")
         return "gpt-4o"
 
     async def complete(self, messages: list, model: str = None):
