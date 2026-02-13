@@ -70,6 +70,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
 
+async def post_init(application):
+    await application.bot.set_my_commands([
+        ("auth", "Authenticate with password"),
+        ("new", "Reset agent session and reload templates"),
+    ])
+
 def run_bot(workspace: str = "."):
     if not TELEGRAM_BOT_TOKEN:
         logger.error("Error: TELEGRAM_BOT_TOKEN not set in environment or .env")
@@ -80,7 +86,7 @@ def run_bot(workspace: str = "."):
     password = ''.join(secrets.choice(alphabet) for _ in range(12))
     print(f"\n========================================\nTELEGRAM BOT AUTH PASSWORD: {password}\n========================================\n")
 
-    application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
     application.bot_data["workspace"] = workspace
     application.bot_data["password"] = password
     
