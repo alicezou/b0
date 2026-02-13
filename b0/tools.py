@@ -8,27 +8,27 @@ def get_time():
     """Get the current local time."""
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-def read_user_memory(user_id: str = None, caller_id: str = None, workspace: str = "."):
-    """Read the user's personal profile/memory file."""
+def read_profile(user_id: str = None, caller_id: str = None, workspace: str = "."):
+    """Read the user's personal profile file."""
     if caller_id and user_id != caller_id:
-        return f"Permission denied: You cannot read memory for user {user_id}."
+        return f"Permission denied: You cannot read profile for user {user_id}."
     
     filename = f"USER-{user_id}.md" if user_id else "USER.md"
     path = Path(workspace) / filename
     if not path.exists():
-        return f"Memory file {filename} not found."
+        return f"Profile file {filename} not found."
     return path.read_text()
 
-def write_user_memory(user_id: str = None, content: str = None, caller_id: str = None, workspace: str = "."):
-    """Write or update the user's personal profile/memory file."""
+def write_profile(user_id: str = None, content: str = None, caller_id: str = None, workspace: str = "."):
+    """Write or update the user's personal profile file."""
     if caller_id and user_id != caller_id:
-        return f"Permission denied: You cannot write memory for user {user_id}."
+        return f"Permission denied: You cannot write profile for user {user_id}."
     
     filename = f"USER-{user_id}.md" if user_id else "USER.md"
     path = Path(workspace) / filename
     path.write_text(content)
-    logger.info(f"User memory updated: {filename}")
-    return f"Successfully updated memory file: {filename}"
+    logger.info(f"User profile updated: {filename}")
+    return f"Successfully updated profile file: {filename}"
 
 def read_global_memory(workspace: str = "."):
     """Read the global memory file shared across all users."""
@@ -60,8 +60,8 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "read_user_memory",
-            "description": "Read your personal profile and facts about the current user",
+            "name": "read_profile",
+            "description": "Read the personal profile (identity, preferences) of the current user",
             "parameters": {
                 "type": "object",
                 "properties": {},
@@ -71,12 +71,12 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "write_user_memory",
-            "description": "Update or save new facts to the current user's personal profile",
+            "name": "write_profile",
+            "description": "Update or save new personal facts/preferences to the current user's profile",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "content": {"type": "string", "description": "The full new content for the memory file"}
+                    "content": {"type": "string", "description": "The full new content for the profile file"}
                 },
                 "required": ["content"]
             },
@@ -112,8 +112,8 @@ TOOLS = [
 # Map names to functions for execution
 TOOL_MAP = {
     "get_time": get_time,
-    "read_user_memory": read_user_memory,
-    "write_user_memory": write_user_memory,
+    "read_profile": read_profile,
+    "write_profile": write_profile,
     "read_global_memory": read_global_memory,
     "write_global_memory": write_global_memory,
 }
