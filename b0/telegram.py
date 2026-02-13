@@ -28,6 +28,20 @@ async def auth(update: Update, context: ContextTypes.DEFAULT_TYPE):
     authorized_users.add(update.effective_user.id)
     await update.message.reply_text("Authenticated successfully! You can now chat with the bot.")
 
+async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in authorized_users:
+        await update.message.reply_text("Please authenticate first using /auth <password>")
+        return
+    
+    workspace = context.bot_data.get("workspace", ".")
+    logger.info(f"Resetting agent for user {user_id}")
+    
+    # Flush current context and re-initialize
+    user_agents[user_id] = Agent(workspace=workspace, purpose=f"Telegram Chat with User {user_id}", user_id=str(user_id))
+    
+    await update.message.reply_text("Context flushed. New agent session started and templates reloaded.")
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in authorized_users:
@@ -71,6 +85,7 @@ def run_bot(workspace: str = "."):
     application.bot_data["password"] = password
     
     application.add_handler(CommandHandler("auth", auth))
+    application.add_handler(CommandHandler("new", reset))
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     
     logger.info("Telegram bot is running...")
