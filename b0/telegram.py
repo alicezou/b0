@@ -14,6 +14,12 @@ user_agents = {}
 # Authorized user IDs
 authorized_users = set()
 
+def format_response(text: str) -> str:
+    """Converts Markdown elements like headers to formats supported by Telegram's ParseMode.MARKDOWN."""
+    # Convert headers (e.g., ### Title) to bold (*Title*)
+    text = re.sub(r'^#{1,6}\s*(.+)$', r'*\1*', text, flags=re.MULTILINE)
+    return text
+
 async def auth(update: Update, context: ContextTypes.DEFAULT_TYPE):
     password = context.bot_data.get("password")
     if not context.args or context.args[0] != password:
@@ -40,11 +46,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.TYPING)
     response = await agent.chat(user_text)
+    formatted_response = format_response(response)
     
     try:
         await context.bot.send_message(
             chat_id=update.effective_chat.id, 
-            text=response,
+            text=formatted_response,
             parse_mode=constants.ParseMode.MARKDOWN
         )
     except:
