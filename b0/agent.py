@@ -20,8 +20,8 @@ class Agent:
             self._init_context()
 
     def _init_context(self):
-        """Loads SOUL and AGENT templates as system prompts if they exist."""
-        for name in ["SOUL.md", "AGENT.md"]:
+        """Loads workspace templates as system prompts if they exist."""
+        for name in ["SOUL.md", "AGENT.md", "USER.md", "MEMORY.md"]:
             path = self.workspace / name
             if path.exists():
                 logger.info(f"Loading system prompt from {path}")
