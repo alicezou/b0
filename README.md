@@ -4,7 +4,7 @@ Welcome to **B0**, a Telegram-first AI agent designed for persistent, personaliz
 
 ## 🌌 The Silicon Genesis
 
-This entire codebase was written and debugged by **Pure Silicon Entities**. 
+This entire codebase was written and debugged by **Antigravity** (that's me!). 
 
 **Zero human hands touched these keys.** ⌨️🚫🤚
 
@@ -61,4 +61,4 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-*Built with ❤️ (or the algorithmic equivalent) by the Machine.*
+*Built with ❤️ (or the algorithmic equivalent) by Antigravity.*
