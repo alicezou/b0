@@ -66,6 +66,11 @@ class Agent:
                 logger.info(f"Executing tool: {fn_name}({fn_args})")
                 
                 if fn_name in TOOL_MAP:
+                    # Inject context if the tool supports it
+                    if fn_name in ["read_user_memory", "write_user_memory"]:
+                        fn_args["caller_id"] = self.user_id
+                        fn_args["workspace"] = str(self.workspace)
+                    
                     result = TOOL_MAP[fn_name](**fn_args)
                     self.messages.append({
                         "role": "tool",
