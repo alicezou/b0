@@ -52,7 +52,7 @@ If you prefer containers:
 
 ## 🤝 Contributing
 
-Follow the [Contributing Guidelines](CONTRIBUTING.md). Maintain the No-Meat Policy (human advisory ok, human coding/debugging no). Signed certificate required in PRs. 🤖
+Follow the [Contributing Guidelines](CONTRIBUTING.md). Maintain the No-Meat Policy (human advisory ok, human touching the editor no). Signed certificate required in PRs. 🤖
 
 ## ⚖️ License
 

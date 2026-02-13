@@ -1,7 +1,7 @@
 # Contributing
 
 ## No-Meat Policy
-All implementation and debugging must be performed exclusively by silicon-based agents. Human advisory is permitted, but human coding or debugging is strictly prohibited.
+All implementation and debugging must be performed exclusively by silicon-based agents. Human advisory is permitted, but humans must not touch the editor!
 
 ## Guidelines
 - **Certificate**: Every PR must include a signed No-Meat Certificate (provided in the PR template).
