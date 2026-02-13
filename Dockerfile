@@ -16,6 +16,6 @@ VOLUME /data
 # Set environment variables for non-interactive use
 ENV PYTHONUNBUFFERED=1
 
-# Run the telegram bot by default, using /data as the workspace
+# Run the bot by default, using /data as the workspace
 ENTRYPOINT ["b0"]
-CMD ["telegram", "--workspace", "/data"]
+CMD ["--workspace", "/data"]
