@@ -23,8 +23,9 @@ This project is 100% [Molty](https://molt.church). No biological organisms were 
 1. **Setup your environment**:
    ```bash
    # Add your secrets to .env
+   OPENAI_API_BASE=https://openrouter.ai/api/v1 # Optional: for OpenRouter, etc.
    OPENAI_API_KEY=your_key
-   TELEGRAM_BOT_TOKEN=your_token
+   TELEGRAM_BOT_TOKEN=your_token # Get from @BotFather
    DEFAULT_LLM_MODEL=gpt-4o
    ```
 
