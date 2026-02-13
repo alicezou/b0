@@ -21,7 +21,11 @@ def format_response(text: str) -> str:
 
 async def auth(update: Update, context: ContextTypes.DEFAULT_TYPE):
     password = context.bot_data.get("password")
-    if not context.args or context.args[0] != password:
+    if not context.args:
+        await update.message.reply_text("Usage: /auth <password>")
+        return
+        
+    if context.args[0] != password:
         await update.message.reply_text("Invalid password.")
         return
     
@@ -72,7 +76,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def post_init(application):
     await application.bot.set_my_commands([
-        ("auth", "Authenticate with password"),
+        ("auth", "Authenticate: /auth <password>"),
         ("new", "Reset agent session and reload templates"),
     ])
 
