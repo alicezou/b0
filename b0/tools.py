@@ -1,5 +1,6 @@
 import datetime
 import logging
+import requests
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -8,22 +9,16 @@ def get_time():
     """Get the current local time."""
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-def read_profile(user_id: str = None, caller_id: str = None, workspace: str = "."):
+def read_profile(user_id: str, workspace: str = "."):
     """Read the user's personal profile file."""
-    if caller_id and user_id != caller_id:
-        return f"Permission denied: You cannot read profile for user {user_id}."
-    
     filename = f"USER-{user_id}.md" if user_id else "USER.md"
     path = Path(workspace) / filename
     if not path.exists():
         return f"Profile file {filename} not found."
     return path.read_text()
 
-def write_profile(user_id: str = None, content: str = None, caller_id: str = None, workspace: str = "."):
+def write_profile(user_id: str, content: str, workspace: str = "."):
     """Write or update the user's personal profile file."""
-    if caller_id and user_id != caller_id:
-        return f"Permission denied: You cannot write profile for user {user_id}."
-    
     filename = f"USER-{user_id}.md" if user_id else "USER.md"
     path = Path(workspace) / filename
     path.write_text(content)
@@ -43,6 +38,50 @@ def write_global_memory(content: str, workspace: str = "."):
     path.write_text(content)
     logger.info("Global memory (MEMORY.md) updated")
     return "Successfully updated global memory."
+
+def get_weather(location: str):
+    """Get the current weather for a given location."""
+    try:
+        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={location}&count=1&language=en&format=json"
+        geo_res = requests.get(geo_url)
+        geo_res.raise_for_status()
+        geo_data = geo_res.json()
+        
+        if not geo_data.get("results"):
+            return f"Could not find location: {location}"
+        
+        result = geo_data["results"][0]
+        lat, lon = result["latitude"], result["longitude"]
+        name, country = result.get("name", location), result.get("country", "")
+        
+        weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
+        weather_res = requests.get(weather_url)
+        weather_res.raise_for_status()
+        weather_data = weather_res.json()
+        
+        current = weather_data.get("current_weather")
+        if not current:
+            return f"Could not get weather data for {name}."
+        
+        desc = {
+            0: "Clear sky",
+            1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+            45: "Fog", 48: "Depositing rime fog",
+            51: "Drizzle: Light", 53: "Drizzle: Moderate", 55: "Drizzle: Dense intensity",
+            61: "Rain: Slight", 63: "Rain: Moderate", 65: "Rain: Heavy intensity",
+            71: "Snow fall: Slight", 73: "Snow fall: Moderate", 75: "Snow fall: Heavy intensity",
+            80: "Rain showers: Slight", 81: "Rain showers: Moderate", 82: "Rain showers: Violent",
+            95: "Thunderstorm: Slight or moderate",
+        }.get(current.get("weathercode"), "Unknown")
+        
+        return (f"Current weather in {name}, {country}:\n"
+                f"- Temperature: {current.get('temperature')}°C\n"
+                f"- Condition: {desc}\n"
+                f"- Wind Speed: {current.get('windspeed')} km/h")
+        
+    except Exception as e:
+        logger.error(f"Error fetching weather: {e}")
+        return f"Error fetching weather: {str(e)}"
 
 # Tool definitions for LiteLLM
 TOOLS = [
@@ -106,6 +145,20 @@ TOOLS = [
                 "required": ["content"]
             },
         },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get the current weather for a specific city or location.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {"type": "string", "description": "The city and country, e.g. 'San Francisco, CA' or 'Tokyo'"}
+                },
+                "required": ["location"]
+            },
+        },
     }
 ]
 
@@ -116,4 +169,5 @@ TOOL_MAP = {
     "write_profile": write_profile,
     "read_global_memory": read_global_memory,
     "write_global_memory": write_global_memory,
+    "get_weather": get_weather,
 }
