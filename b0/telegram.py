@@ -1,7 +1,9 @@
 import logging
-from telegram import Update, constants
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 import re
+import secrets
+import string
+from telegram import Update, constants
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters, CommandHandler
 from .config import TELEGRAM_BOT_TOKEN
 from .agent import Agent
 
@@ -9,9 +11,24 @@ logger = logging.getLogger(__name__)
 
 # Store agents by user_id
 user_agents = {}
+# Authorized user IDs
+authorized_users = set()
+
+async def auth(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    password = context.bot_data.get("password")
+    if not context.args or context.args[0] != password:
+        await update.message.reply_text("Invalid password.")
+        return
+    
+    authorized_users.add(update.effective_user.id)
+    await update.message.reply_text("Authenticated successfully! You can now chat with the bot.")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    if user_id not in authorized_users:
+        await update.message.reply_text("Please authenticate first using /auth <password>")
+        return
+
     user_text = update.message.text
     workspace = context.bot_data.get("workspace", ".")
 
@@ -21,13 +38,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     agent = user_agents[user_id]
     
-    # Show typing status
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.TYPING)
-    
     response = await agent.chat(user_text)
     
-    # Simple escape for non-markdown parts would be ideal, but for now we try to send as is
-    # or with a light escape. Most robust way is usually MarkdownV2 with specific escaping.
     try:
         await context.bot.send_message(
             chat_id=update.effective_chat.id, 
@@ -35,7 +48,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode=constants.ParseMode.MARKDOWN
         )
     except:
-        # Fallback to plain text if markdown parsing fails
         await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
 
 def run_bot(workspace: str = "."):
@@ -43,11 +55,17 @@ def run_bot(workspace: str = "."):
         logger.error("Error: TELEGRAM_BOT_TOKEN not set in environment or .env")
         return
 
+    # Generate a random alphanumeric password
+    alphabet = string.ascii_letters + string.digits
+    password = ''.join(secrets.choice(alphabet) for _ in range(12))
+    print(f"\n========================================\nTELEGRAM BOT AUTH PASSWORD: {password}\n========================================\n")
+
     application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
     application.bot_data["workspace"] = workspace
+    application.bot_data["password"] = password
     
-    handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message)
-    application.add_handler(handler)
+    application.add_handler(CommandHandler("auth", auth))
+    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     
     logger.info("Telegram bot is running...")
     application.run_polling()
