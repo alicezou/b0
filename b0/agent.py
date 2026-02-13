@@ -72,6 +72,9 @@ class Agent:
                         fn_args["caller_id"] = self.user_id
                         fn_args["workspace"] = str(self.workspace)
                     
+                    if fn_name in ["read_global_memory", "write_global_memory"]:
+                        fn_args["workspace"] = str(self.workspace)
+                    
                     result = TOOL_MAP[fn_name](**fn_args)
                     self.messages.append({
                         "role": "tool",

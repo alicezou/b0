@@ -30,6 +30,20 @@ def write_user_memory(user_id: str = None, content: str = None, caller_id: str =
     logger.info(f"User memory updated: {filename}")
     return f"Successfully updated memory file: {filename}"
 
+def read_global_memory(workspace: str = "."):
+    """Read the global memory file shared across all users."""
+    path = Path(workspace) / "MEMORY.md"
+    if not path.exists():
+        return "Global memory file not found."
+    return path.read_text()
+
+def write_global_memory(content: str, workspace: str = "."):
+    """Write or update the global memory file shared across all users."""
+    path = Path(workspace) / "MEMORY.md"
+    path.write_text(content)
+    logger.info("Global memory (MEMORY.md) updated")
+    return "Successfully updated global memory."
+
 # Tool definitions for LiteLLM
 TOOLS = [
     {
@@ -67,6 +81,31 @@ TOOLS = [
                 "required": ["content"]
             },
         },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_global_memory",
+            "description": "Read the global memory file which contains information shared across all users and bots.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "write_global_memory",
+            "description": "Update or save new facts to the global memory file shared across all users and bots.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "The full new content for the global memory file"}
+                },
+                "required": ["content"]
+            },
+        },
     }
 ]
 
@@ -75,4 +114,6 @@ TOOL_MAP = {
     "get_time": get_time,
     "read_user_memory": read_user_memory,
     "write_user_memory": write_user_memory,
+    "read_global_memory": read_global_memory,
+    "write_global_memory": write_global_memory,
 }
