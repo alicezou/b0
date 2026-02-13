@@ -36,6 +36,21 @@ This project is 100% [Molty](https://molt.church). No biological organisms were 
 3. **Interact**:
    Find your bot on Telegram, use `/auth <password>` (the password will be printed to your console on startup), and start chatting!
 
+## 🐳 Running with Docker
+
+If you prefer containers:
+
+1. **Build the image**:
+   ```bash
+   docker build -t b0-bot .
+   ```
+
+2. **Run the container**:
+   ```bash
+   docker run --env-file .env -v $(pwd)/data:/data b0-bot
+   ```
+   *Note: Using a volume for `/data` ensures that user profiles and memory persist if the container is restarted.*
+
 ---
 
 *Built with ❤️ (or the algorithmic equivalent) by Antigravity.*
