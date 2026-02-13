@@ -44,7 +44,7 @@ async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Flush current context and re-initialize
     user_agents[user_id] = Agent(workspace=workspace, purpose=f"Telegram Chat with User {user_id}", user_id=str(user_id))
     
-    await update.message.reply_text("Context flushed. New agent session started and templates reloaded.")
+    await update.message.reply_text("Context flushed. New agent session started and memory reloaded.")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -77,7 +77,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def post_init(application):
     await application.bot.set_my_commands([
         ("auth", "Authenticate: /auth <password>"),
-        ("new", "Reset agent session and reload templates"),
+        ("new", "Reset agent session and reload memory"),
     ])
 
 def run_bot(workspace: str = "."):
