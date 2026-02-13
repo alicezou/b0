@@ -37,10 +37,9 @@ class LLMConnector:
         logger.info("No local models found, falling back to gpt-4o")
         return "gpt-4o"
 
-    async def complete(self, messages: list, model: str = None):
+    async def complete(self, messages: list, model: str = None, tools: list = None):
         m = model or self.model
         
-        # If using OpenRouter and model is not prefixed, prefix it
         if config.OPENAI_API_BASE and "openrouter.ai" in config.OPENAI_API_BASE:
             if not m.startswith("openrouter/"):
                 m = f"openrouter/{m}"
@@ -49,6 +48,9 @@ class LLMConnector:
             "model": m,
             "messages": messages,
         }
+        
+        if tools:
+            kwargs["tools"] = tools
         
         if config.OPENAI_API_KEY:
             kwargs["api_key"] = config.OPENAI_API_KEY
@@ -60,9 +62,10 @@ class LLMConnector:
 
         try:
             response = await litellm.acompletion(**kwargs)
-            return response.choices[0].message.content
+            return response.choices[0].message
         except Exception as e:
-            return f"LLM Error: {str(e)}"
+            logger.error(f"LLM Error: {e}")
+            return None
 
 client = LLMConnector()
 complete = client.complete

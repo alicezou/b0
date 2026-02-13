@@ -1,8 +1,10 @@
 import copy
 import os
 import logging
+import json
 from pathlib import Path
 from . import llm
+from .tools import TOOLS, TOOL_MAP
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +34,37 @@ class Agent:
 
     async def chat(self, prompt: str):
         self.messages.append({"role": "user", "content": prompt})
-        answer = await llm.complete(self.messages)
-        self.messages.append({"role": "assistant", "content": answer})
-        return answer
+        
+        while True:
+            message = await llm.complete(self.messages, tools=TOOLS)
+            if not message:
+                return "Error: LLM failed to respond."
+            
+            self.messages.append(message)
+            
+            if not message.tool_calls:
+                return message.content
+
+            for tool_call in message.tool_calls:
+                fn_name = tool_call.function.name
+                fn_args = json.loads(tool_call.function.arguments)
+                logger.info(f"Executing tool: {fn_name}({fn_args})")
+                
+                if fn_name in TOOL_MAP:
+                    result = TOOL_MAP[fn_name](**fn_args)
+                    self.messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "name": fn_name,
+                        "content": str(result)
+                    })
+                else:
+                    self.messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "name": fn_name,
+                        "content": f"Error: Tool {fn_name} not found."
+                    })
 
     async def run(self):
         """Interactive loop managed by the agent."""
