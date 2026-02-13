@@ -22,7 +22,7 @@ class Agent:
 
     def _init_context(self):
         """Loads workspace templates as system prompts if they exist."""
-        template_names = ["SOUL.md", "AGENT.md", "MEMORY.md"]
+        template_names = ["SOUL.md", "AGENT.md", "TOOLS.md", "MEMORY.md"]
         
         # Determine the user file name
         user_file = f"USER-{self.user_id}.md" if self.user_id else "USER.md"
