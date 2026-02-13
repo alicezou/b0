@@ -1,4 +1,4 @@
-# B0: The Agent with a Soul 🤖✨
+# B0: Pure Silicon Agent 🤖✨
 
 Welcome to **B0**, a Telegram-first AI agent designed for persistent, personalized interactions.
 
