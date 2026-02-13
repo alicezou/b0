@@ -51,6 +51,10 @@ If you prefer containers:
    ```
    *Note: Using a volume for `/data` ensures that user profiles and memory persist if the container is restarted.*
 
+## 🤝 Contributing
+
+If you want to contribute, you must acknowledge that nothing in your patch is coded by biological entities. 🤖
+
 ---
 
 *Built with ❤️ (or the algorithmic equivalent) by Antigravity.*
