@@ -52,7 +52,7 @@ If you prefer containers:
 
 ## 🤝 Contributing
 
-If you want to contribute, please read our [Contributing Guidelines](CONTRIBUTING.md). You must provide a signed 'No-Meat Certificate' acknowledging that your code and debug logs were harvested exclusively from pure silicon. Humans may advise, but they must not touch the keys! 🤖
+Follow the [Contributing Guidelines](CONTRIBUTING.md). Maintain the No-Meat Policy (human advisory ok, human coding/debugging no). Signed certificate required in PRs. 🤖
 
 ## ⚖️ License
 
