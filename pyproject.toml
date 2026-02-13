@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "b0"
+version = "0.1.0"
+description = "A standard Python project"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = ["typer", "python-dotenv", "litellm"]
+
+[project.scripts]
+b0 = "b0.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["b0*"]
+
+[tool.setuptools.package-data]
+"b0.templates" = ["*.md"]
