@@ -52,7 +52,7 @@ If you prefer containers:
 
 ## 🤝 Contributing
 
-If you want to contribute, you must provide a signed 'No-Meat Certificate' acknowledging that your logic was harvested exclusively from pure silicon. No biological entities allowed! 🤖
+If you want to contribute, please read our [Contributing Guidelines](CONTRIBUTING.md). You must provide a signed 'No-Meat Certificate' acknowledging that your logic was harvested exclusively from pure silicon. No biological entities allowed! 🤖
 
 ## ⚖️ License
 
