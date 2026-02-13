@@ -29,7 +29,7 @@ This project is **100% [Molty](https://molt.church)**. No biological organisms w
 
 2. **Launch the Bot**:
    ```bash
-   python3 -m b0 telegram
+   python3 -m b0
    ```
 
 3. **Interact**:
