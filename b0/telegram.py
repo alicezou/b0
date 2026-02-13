@@ -39,7 +39,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_id not in user_agents:
         logger.info(f"Initializing new agent for user {user_id}")
-        user_agents[user_id] = Agent(workspace=workspace, purpose=f"Telegram Chat with User {user_id}")
+        user_agents[user_id] = Agent(workspace=workspace, purpose=f"Telegram Chat with User {user_id}", user_id=str(user_id))
     
     agent = user_agents[user_id]
     

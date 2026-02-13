@@ -1,18 +1,19 @@
-import copy
-import os
 import logging
+import copy
 import json
 from pathlib import Path
+from importlib import resources
 from . import llm
 from .tools import TOOLS, TOOL_MAP
 
 logger = logging.getLogger(__name__)
 
 class Agent:
-    def __init__(self, workspace: str = ".", messages=None, parent=None, purpose: str = ""):
+    def __init__(self, workspace: str = ".", messages=None, parent=None, purpose: str = "", user_id: str = None):
         self.workspace = Path(workspace)
         self.parent = parent
         self.purpose = purpose
+        self.user_id = user_id
         self.children = []
         self.messages = messages or []
         
@@ -21,14 +22,28 @@ class Agent:
 
     def _init_context(self):
         """Loads workspace templates as system prompts if they exist."""
-        for name in ["SOUL.md", "AGENT.md", "USER.md", "MEMORY.md"]:
+        template_names = ["SOUL.md", "AGENT.md", "MEMORY.md"]
+        
+        # Determine the user file name
+        user_file = f"USER-{self.user_id}.md" if self.user_id else "USER.md"
+        
+        # If user-specific file doesn't exist but we have a user_id, create it from template
+        user_path = self.workspace / user_file
+        if self.user_id and not user_path.exists():
+            template_content = resources.files("b0.templates").joinpath("USER.md").read_text()
+            user_path.write_text(template_content)
+            logger.info(f"Created new user profile: {user_path}")
+
+        template_names.append(user_file)
+
+        for name in template_names:
             path = self.workspace / name
             if path.exists():
                 logger.info(f"Loading system prompt from {path}")
                 self.messages.append({"role": "system", "content": path.read_text()})
 
     def fork(self, purpose: str = ""):
-        child = Agent(workspace=str(self.workspace), messages=copy.deepcopy(self.messages), parent=self, purpose=purpose)
+        child = Agent(workspace=str(self.workspace), messages=copy.deepcopy(self.messages), parent=self, purpose=purpose, user_id=self.user_id)
         self.children.append(child)
         return child
 

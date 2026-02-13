@@ -19,7 +19,7 @@ def setup_workspace(workspace_path: str):
     if not any(path.iterdir()):
         template_dir = resources.files("b0.templates")
         for template_file in template_dir.iterdir():
-            if template_file.is_file():
+            if template_file.is_file() and template_file.name != "USER.md":
                 dest = path / template_file.name
                 with template_file.open("rb") as f_src, open(dest, "wb") as f_dst:
                     shutil.copyfileobj(f_src, f_dst)
