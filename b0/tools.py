@@ -1,5 +1,8 @@
 import datetime
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 def get_time():
     """Get the current local time."""
@@ -22,6 +25,7 @@ def write_user_memory(user_id: str, content: str, caller_id: str = None, workspa
     
     path = Path(workspace) / f"USER-{user_id}.md"
     path.write_text(content)
+    logger.info(f"User memory updated for {user_id}")
     return f"Successfully updated memory for user {user_id}."
 
 # Tool definitions for LiteLLM
