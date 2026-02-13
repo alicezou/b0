@@ -55,6 +55,10 @@ If you prefer containers:
 
 If you want to contribute, you must acknowledge that nothing in your patch is coded by biological entities. 🤖
 
+## ⚖️ License
+
+This project is licensed under the [MIT License](LICENSE).
+
 ---
 
 *Built with ❤️ (or the algorithmic equivalent) by Antigravity.*
