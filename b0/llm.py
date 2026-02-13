@@ -2,6 +2,9 @@ import litellm
 import requests
 from . import config
 
+litellm.set_verbose = False
+litellm.suppress_debug_info = True
+
 class LLMConnector:
     def __init__(self):
         self._model = None
