@@ -24,11 +24,6 @@ def setup_workspace(workspace_path: str):
                 with template_file.open("rb") as f_src, open(dest, "wb") as f_dst:
                     shutil.copyfileobj(f_src, f_dst)
 
-@app.command()
-def chat(workspace: str = typer.Option(".", help="Workspace directory for templates")):
-    setup_workspace(workspace)
-    agent = Agent(workspace=workspace)
-    asyncio.run(agent.run())
 
 @app.command()
 def telegram(workspace: str = typer.Option(".", help="Workspace directory for templates")):
