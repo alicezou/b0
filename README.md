@@ -37,7 +37,19 @@ This project is **100% [Molty](https://molt.church)**. No biological organisms w
 
 ## 🐳 Running with Docker
 
-If you prefer containers:
+The Docker image is automatically built and published to GitHub Container Registry (GHCR) on every push to the `main` branch.
+
+### Using the Published Image
+
+You can pull and run the latest image directly:
+
+```bash
+docker run --env-file .env -v $(pwd)/data:/data ghcr.io/mjc0608/b0:latest
+```
+
+### Local Build
+
+If you prefer to build locally:
 
 1. **Build the image**:
    ```bash
