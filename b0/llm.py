@@ -40,13 +40,22 @@ class LLMConnector:
     async def complete(self, messages: list, model: str = None, tools: list = None):
         m = model or self.model
         
-        if config.OPENAI_API_BASE and "openrouter.ai" in config.OPENAI_API_BASE:
+        # OpenRouter specific handling
+        is_openrouter = config.OPENAI_API_BASE and "openrouter.ai" in config.OPENAI_API_BASE
+        
+        if is_openrouter:
             if not m.startswith("openrouter/"):
                 m = f"openrouter/{m}"
+            # LiteLLM sometimes looks for this specifically
+            if config.OPENAI_API_KEY:
+                import os
+                os.environ["OPENROUTER_API_KEY"] = config.OPENAI_API_KEY
+                os.environ["OPENAI_API_KEY"] = config.OPENAI_API_KEY
         
         kwargs = {
             "model": m,
             "messages": messages,
+            "drop_params": True, # OpenRouter is sensitive to extra OpenAI params
         }
         
         if tools:
@@ -54,7 +63,12 @@ class LLMConnector:
         
         if config.OPENAI_API_KEY:
             kwargs["api_key"] = config.OPENAI_API_KEY
-        if config.OPENAI_API_BASE:
+        
+        if is_openrouter:
+            # When using openrouter/ prefix, LiteLLM knows the default base
+            # but we can provide it just in case.
+            kwargs["api_base"] = config.OPENAI_API_BASE
+        elif config.OPENAI_API_BASE:
             kwargs["api_base"] = config.OPENAI_API_BASE
             
         if m.startswith("ollama/"):
