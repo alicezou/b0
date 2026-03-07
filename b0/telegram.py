@@ -11,6 +11,11 @@ from .auth import AuthManager
 
 logger = logging.getLogger(__name__)
 user_agents = {}
+user_modes = {} # "cmd" or "coach"
+
+COACH_PROMPT = """You are a professional bodybuilding coach. 
+Analyze meal images sent by users and provide a concise comment on their nutritional value (macros, calorie estimation, protein quality) from a bodybuilding perspective. 
+Be direct, professional, and brief. If the image is not of food, politely remind the user to send meal images."""
 
 def format_response(text: str) -> str:
     return telegramify_markdown.markdownify(text)
@@ -38,7 +43,31 @@ async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     workspace = context.bot_data.get("workspace", ".")
     user_agents[uid] = Agent(workspace=workspace, purpose=f"Chat {uid}", user_id=str(uid))
-    await update.message.reply_text("Context flushed.")
+    user_modes[uid] = "normal"
+    await update.message.reply_text("Context flushed and returned to normal mode.")
+
+async def coach(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid, auth_mgr = update.effective_user.id, context.bot_data.get("auth_manager")
+    if not auth_mgr.is_authorized(uid):
+        await update.message.reply_text("Auth required.")
+        return
+    
+    workspace = context.bot_data.get("workspace", ".")
+    # Initialize coach agent with special system prompt
+    coach_agent = Agent(workspace=workspace, purpose=f"Coach {uid}", user_id=str(uid))
+    coach_agent.messages.append({"role": "system", "content": COACH_PROMPT})
+    
+    user_agents[uid] = coach_agent
+    user_modes[uid] = "coach"
+    await update.message.reply_text("Coach mode activated. Send me photos of your meals!")
+
+async def exit_coach(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    if user_modes.get(uid) != "coach":
+        await update.message.reply_text("Not in coach mode.")
+        return
+    
+    await reset(update, context)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid, auth_mgr = update.effective_user.id, context.bot_data.get("auth_manager")
@@ -58,12 +87,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         photo_bytes = await photo_file.download_as_bytearray()
         base64_image = base64.b64encode(photo_bytes).decode('utf-8')
         
+        caption = update.message.caption or ("Analyze this meal." if user_modes.get(uid) == "coach" else "Analyze this image.")
         content = [
-            {"type": "text", "text": update.message.caption or "Analyze this image."},
+            {"type": "text", "text": caption},
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
         ]
         response = await user_agents[uid].chat(content)
     else:
+        if user_modes.get(uid) == "coach":
+            await update.message.reply_text("I'm in coach mode. Please send me a photo of your meal! Or use /b0 to exit.")
+            return
         response = await user_agents[uid].chat(update.message.text)
     
     try:
@@ -77,7 +110,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
 
 async def post_init(app):
-    await app.bot.set_my_commands([("auth", "Authorize"), ("new", "Reset")])
+    await app.bot.set_my_commands([
+        ("auth", "Authorize"), 
+        ("new", "Reset"),
+        ("coach", "Bodybuilding Coach Mode"),
+        ("b0", "Exit Coach Mode")
+    ])
 
 def run_bot(workspace: str = "."):
     if not TELEGRAM_BOT_TOKEN:
@@ -92,5 +130,7 @@ def run_bot(workspace: str = "."):
     
     app.add_handler(CommandHandler("auth", auth))
     app.add_handler(CommandHandler("new", reset))
+    app.add_handler(CommandHandler("coach", coach))
+    app.add_handler(CommandHandler("b0", exit_coach))
     app.add_handler(MessageHandler((filters.TEXT | filters.PHOTO) & (~filters.COMMAND), handle_message))
     app.run_polling()
