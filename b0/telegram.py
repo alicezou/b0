@@ -1,6 +1,7 @@
 import logging
 import secrets
 import string
+import base64
 import telegramify_markdown
 from telegram import Update, constants
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters, CommandHandler
@@ -50,7 +51,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_agents[uid] = Agent(workspace=workspace, purpose=f"Chat {uid}", user_id=str(uid))
     
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.TYPING)
-    response = await user_agents[uid].chat(update.message.text)
+    
+    if update.message.photo:
+        # Get the largest photo
+        photo_file = await update.message.photo[-1].get_file()
+        photo_bytes = await photo_file.download_as_bytearray()
+        base64_image = base64.b64encode(photo_bytes).decode('utf-8')
+        
+        content = [
+            {"type": "text", "text": update.message.caption or "Analyze this image."},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+        ]
+        response = await user_agents[uid].chat(content)
+    else:
+        response = await user_agents[uid].chat(update.message.text)
     
     try:
         await context.bot.send_message(
@@ -58,7 +72,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=format_response(response),
             parse_mode=constants.ParseMode.MARKDOWN_V2
         )
-    except:
+    except Exception as e:
+        logger.warning(f"Failed to send markdown message: {e}")
         await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
 
 async def post_init(app):
@@ -77,5 +92,5 @@ def run_bot(workspace: str = "."):
     
     app.add_handler(CommandHandler("auth", auth))
     app.add_handler(CommandHandler("new", reset))
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+    app.add_handler(MessageHandler((filters.TEXT | filters.PHOTO) & (~filters.COMMAND), handle_message))
     app.run_polling()

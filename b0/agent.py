@@ -47,8 +47,8 @@ class Agent:
         self.children.append(child)
         return child
 
-    async def chat(self, prompt: str):
-        self.messages.append({"role": "user", "content": prompt})
+    async def chat(self, content: str | list):
+        self.messages.append({"role": "user", "content": content})
         
         while True:
             message = await llm.complete(self.messages, tools=TOOLS)
