@@ -9,13 +9,10 @@ from .config import TELEGRAM_BOT_TOKEN
 from .agent import Agent
 from .auth import AuthManager
 
+from importlib import resources
 logger = logging.getLogger(__name__)
 user_agents = {}
 user_modes = {} # "cmd" or "coach"
-
-COACH_PROMPT = """You are a professional bodybuilding coach. 
-Analyze meal images sent by users and provide a concise comment on their nutritional value (macros, calorie estimation, protein quality) from a bodybuilding perspective. 
-Be direct, professional, and brief. If the image is not of food, politely remind the user to send meal images."""
 
 def format_response(text: str) -> str:
     return telegramify_markdown.markdownify(text)
@@ -55,7 +52,9 @@ async def coach(update: Update, context: ContextTypes.DEFAULT_TYPE):
     workspace = context.bot_data.get("workspace", ".")
     # Initialize coach agent with special system prompt
     coach_agent = Agent(workspace=workspace, purpose=f"Coach {uid}", user_id=str(uid))
-    coach_agent.messages.append({"role": "system", "content": COACH_PROMPT})
+    
+    coach_prompt = resources.files("b0.templates").joinpath("COACH.md").read_text()
+    coach_agent.messages.append({"role": "system", "content": coach_prompt})
     
     user_agents[uid] = coach_agent
     user_modes[uid] = "coach"
