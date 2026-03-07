@@ -93,9 +93,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         response = await user_agents[uid].chat(content)
     else:
-        if user_modes.get(uid) == "coach":
-            await update.message.reply_text("I'm in coach mode. Please send me a photo of your meal! Or use /b0 to exit.")
-            return
         response = await user_agents[uid].chat(update.message.text)
     
     try:
