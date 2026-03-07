@@ -18,19 +18,24 @@ def format_response(text: str) -> str:
     return telegramify_markdown.markdownify(text)
 
 async def auth(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pwd, auth_mgr = context.bot_data.get("password"), context.bot_data.get("auth_manager")
+    auth_mgr = context.bot_data.get("auth_manager")
     uid = update.effective_user.id
     
     if auth_mgr.is_authorized(uid):
         await update.message.reply_text("Already authenticated.")
         return
 
-    if not context.args or context.args[0] != pwd:
-        await update.message.reply_text("Usage: /auth <password>")
+    if not context.args:
+        await update.message.reply_text("Usage: /auth <token>")
         return
     
-    priv = auth_mgr.authorize(uid)
-    await update.message.reply_text(f"Authenticated as {priv}!")
+    token = context.args[0]
+    priv = auth_mgr.authorize(uid, token)
+    
+    if priv:
+        await update.message.reply_text(f"Authenticated as {priv}!")
+    else:
+        await update.message.reply_text("Invalid or already used token.")
 
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid, auth_mgr = update.effective_user.id, context.bot_data.get("auth_manager")
@@ -118,11 +123,22 @@ def run_bot(workspace: str = "."):
         logger.error("TELEGRAM_BOT_TOKEN not set")
         return
 
-    pwd = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
-    print(f"\nAUTH PASSWORD: {pwd}\n")
+    auth_mgr = AuthManager(workspace)
+    if not auth_mgr.tokens and not auth_mgr.users:
+        # Generate 5 initial tokens if the system is fresh
+        for _ in range(5):
+            new_token = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
+            auth_mgr.tokens.append(new_token)
+        auth_mgr._save_tokens()
+    
+    if auth_mgr.tokens:
+        print("\nAVAILABLE AUTH TOKENS:")
+        for t in auth_mgr.tokens:
+            print(f"- {t}")
+        print()
 
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
-    app.bot_data.update({"workspace": workspace, "password": pwd, "auth_manager": AuthManager(workspace)})
+    app.bot_data.update({"workspace": workspace, "auth_manager": auth_mgr})
     
     app.add_handler(CommandHandler("auth", auth))
     app.add_handler(CommandHandler("new", reset))
