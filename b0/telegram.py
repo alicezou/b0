@@ -1,6 +1,7 @@
 import logging
 import secrets
 import string
+import uuid
 import base64
 import telegramify_markdown
 from telegram import Update, constants
@@ -124,17 +125,24 @@ def run_bot(workspace: str = "."):
         return
 
     auth_mgr = AuthManager(workspace)
-    if not auth_mgr.tokens and not auth_mgr.users:
-        # Generate 5 initial tokens if the system is fresh
-        for _ in range(5):
-            new_token = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
-            auth_mgr.tokens.append(new_token)
+    # Maintain exactly 2 admin tokens and 3 user tokens
+    modified = False
+    while len(auth_mgr.admin_tokens) < 2:
+        auth_mgr.admin_tokens.append(str(uuid.uuid4()))
+        modified = True
+    while len(auth_mgr.user_tokens) < 3:
+        auth_mgr.user_tokens.append(str(uuid.uuid4()))
+        modified = True
+    
+    if modified:
         auth_mgr._save_tokens()
     
     if auth_mgr.tokens:
         print("\nAVAILABLE AUTH TOKENS:")
-        for t in auth_mgr.tokens:
-            print(f"- {t}")
+        for t in auth_mgr.admin_tokens:
+            print(f"- {t} (ADMIN)")
+        for t in auth_mgr.user_tokens:
+            print(f"- {t} (USER)")
         print()
 
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
