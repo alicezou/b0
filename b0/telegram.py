@@ -15,7 +15,8 @@ from .auth import AuthManager
 from importlib import resources
 logger = logging.getLogger(__name__)
 user_agents = {}
-user_modes = {} # "cmd" or "coach"
+user_modes = {} # "cmd", "coach", "coach_pending_goal"
+user_buffers = {} # uid -> {'photos': [], 'caption': '', 'job': Job}
 
 def format_response(text: str) -> str:
     return telegramify_markdown.markdownify(text)
@@ -103,6 +104,39 @@ async def exit_coach(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await reset(update, context)
 
+async def process_meal(context: ContextTypes.DEFAULT_TYPE):
+    job = context.job
+    uid = job.user_id
+    chat_id = job.chat_id
+    buffer = user_buffers.get(uid)
+    if not buffer:
+        return
+    
+    photos = buffer['photos']
+    caption = buffer['caption']
+    del user_buffers[uid]
+    
+    await context.bot.send_chat_action(chat_id=chat_id, action=constants.ChatAction.TYPING)
+    
+    # Analyze all images together
+    mode = user_modes.get(uid)
+    default_caption = "Analyze this meal." if mode == "coach" else "Analyze these images."
+    content = [{"type": "text", "text": caption or default_caption}]
+    for base64_img in photos:
+        content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_img}"}})
+    
+    response = await user_agents[uid].chat(content)
+    
+    try:
+        await context.bot.send_message(
+            chat_id=chat_id, 
+            text=format_response(response),
+            parse_mode=constants.ParseMode.MARKDOWN_V2
+        )
+    except Exception as e:
+        logger.warning(f"Failed to send markdown message: {e}")
+        await context.bot.send_message(chat_id=chat_id, text=response)
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid, auth_mgr = update.effective_user.id, context.bot_data.get("auth_manager")
     if not auth_mgr.is_authorized(uid):
@@ -113,17 +147,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if uid not in user_agents:
         user_agents[uid] = Agent(workspace=workspace, purpose=f"Chat {uid}", user_id=str(uid))
     
-    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.TYPING)
-    
     if user_modes.get(uid) == "coach_pending_goal":
         if update.message.text:
+            await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.TYPING)
             profile_path = Path(workspace) / f"USER-{uid}.md"
             missing_before = get_missing_coach_fields(profile_path)
             
             prompt = f"The user is providing profile information: {update.message.text}. Use your write_profile tool to update their profile under 'My Bodybuilding Profile & Goals:'. The fields are: Current Stats, Goal, Activity Level, and Supplements. Only update the fields provided. Then, if any of these 4 fields are still missing (Missing: {', '.join(missing_before)}), acknowledge what you received and ask for the remaining ones. If all are filled, confirm you are ready for meal images."
             response = await user_agents[uid].chat(prompt)
             
-            # Check again after AI processing
             missing_after = get_missing_coach_fields(profile_path)
             if not missing_after:
                 user_modes[uid] = "coach"
@@ -137,30 +169,38 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text("Please provide your profile information as text first.")
             return
-    elif update.message.photo:
-        # Get the largest photo
+
+    if update.message.photo:
         photo_file = await update.message.photo[-1].get_file()
         photo_bytes = await photo_file.download_as_bytearray()
         base64_image = base64.b64encode(photo_bytes).decode('utf-8')
+        caption = update.message.caption or ""
         
-        caption = update.message.caption or ("Analyze this meal." if user_modes.get(uid) == "coach" else "Analyze this image.")
-        content = [
-            {"type": "text", "text": caption},
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-        ]
-        response = await user_agents[uid].chat(content)
+        if uid not in user_buffers:
+            user_buffers[uid] = {'photos': [], 'caption': '', 'job': None}
+        
+        buffer = user_buffers[uid]
+        buffer['photos'].append(base64_image)
+        if caption:
+            buffer['caption'] = (buffer['caption'] + " " + caption).strip()
+            
+        if buffer['job']:
+            buffer['job'].schedule_removal()
+        
+        buffer['job'] = context.job_queue.run_once(process_meal, 10.0, user_id=uid, chat_id=update.effective_chat.id)
+        return
     else:
+        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.TYPING)
         response = await user_agents[uid].chat(update.message.text)
-    
-    try:
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id, 
-            text=format_response(response),
-            parse_mode=constants.ParseMode.MARKDOWN_V2
-        )
-    except Exception as e:
-        logger.warning(f"Failed to send markdown message: {e}")
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
+        try:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id, 
+                text=format_response(response),
+                parse_mode=constants.ParseMode.MARKDOWN_V2
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send markdown message: {e}")
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=response)
 
 async def post_init(app):
     await app.bot.set_my_commands([
@@ -176,7 +216,6 @@ def run_bot(workspace: str = "."):
         return
 
     auth_mgr = AuthManager(workspace)
-    # Maintain exactly 2 admin tokens and 3 user tokens
     modified = False
     while len(auth_mgr.admin_tokens) < 2:
         auth_mgr.admin_tokens.append(str(uuid.uuid4()))
