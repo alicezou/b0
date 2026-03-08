@@ -15,3 +15,4 @@ Information about the primary user of this agent.
 - **Professional Background**: 
 - **Technical Skills**: 
 - **Current Projects**: 
+- **Bodybuilding Goal**: 

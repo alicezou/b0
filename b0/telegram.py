@@ -3,6 +3,8 @@ import secrets
 import string
 import uuid
 import base64
+import re
+from pathlib import Path
 import telegramify_markdown
 from telegram import Update, constants
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters, CommandHandler
@@ -63,12 +65,26 @@ async def coach(update: Update, context: ContextTypes.DEFAULT_TYPE):
     coach_agent.messages.append({"role": "system", "content": coach_prompt})
     
     user_agents[uid] = coach_agent
-    user_modes[uid] = "coach"
-    await update.message.reply_text("Coach mode activated. Send me photos of your meals!")
+    
+    # Check if goal exists in profile
+    profile_path = Path(workspace) / f"USER-{uid}.md"
+    goal_set = False
+    if profile_path.exists():
+        content = profile_path.read_text()
+        match = re.search(r"- \*\*Bodybuilding Goal\*\*: (.+)", content)
+        if match and match.group(1).strip() and match.group(1).strip() != "(e.g., cutting, bulking, maintenance)":
+            goal_set = True
+    
+    if not goal_set:
+        user_modes[uid] = "coach_pending_goal"
+        await update.message.reply_text("Coach mode activated! But first, I need to know your fitness goal (e.g., cutting, bulking, maintenance). Please tell me your goal.")
+    else:
+        user_modes[uid] = "coach"
+        await update.message.reply_text("Coach mode activated. Send me photos of your meals!")
 
 async def exit_coach(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
-    if user_modes.get(uid) != "coach":
+    if not user_modes.get(uid, "").startswith("coach"):
         await update.message.reply_text("Not in coach mode.")
         return
     
@@ -86,7 +102,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=constants.ChatAction.TYPING)
     
-    if update.message.photo:
+    if user_modes.get(uid) == "coach_pending_goal":
+        if update.message.text:
+            prompt = f"The user is providing their bodybuilding goal: {update.message.text}. Use your write_profile tool to save this to their profile under 'Bodybuilding Goal'. Then confirm you are ready for meal images."
+            response = await user_agents[uid].chat(prompt)
+            user_modes[uid] = "coach"
+        else:
+            await update.message.reply_text("Please provide your fitness goal as text first.")
+            return
+    elif update.message.photo:
         # Get the largest photo
         photo_file = await update.message.photo[-1].get_file()
         photo_bytes = await photo_file.download_as_bytearray()
