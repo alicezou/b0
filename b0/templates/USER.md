@@ -2,9 +2,14 @@
 Information about the primary user of this agent.
 
 ## Core Information
-- **Name**: 
-- **Preferred Language**: 
-- **Timezone**: 
+* **Name:** 
+* **Preferred Language:** 
+
+## My Bodybuilding Profile & Goals:
+* **Current Stats:** 
+* **Goal:** 
+* **Activity Level:** 
+* **Supplements:** 
 
 ## Preferences
 - **Communication Style**: (e.g., Casual, Formal, Technical)
@@ -15,4 +20,3 @@ Information about the primary user of this agent.
 - **Professional Background**: 
 - **Technical Skills**: 
 - **Current Projects**: 
-- **Bodybuilding Goal**: 

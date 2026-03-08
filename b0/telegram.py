@@ -20,6 +20,23 @@ user_modes = {} # "cmd" or "coach"
 def format_response(text: str) -> str:
     return telegramify_markdown.markdownify(text)
 
+def get_missing_coach_fields(profile_path: Path) -> list[str]:
+    if not profile_path.exists():
+        return ["Current Stats", "Goal", "Activity Level", "Supplements"]
+    content = profile_path.read_text()
+    missing = []
+    fields = {
+        "Current Stats": r"[\*\-] \*\*Current Stats[:]?\*\*[:]? (.+)",
+        "Goal": r"[\*\-] \*\*Goal[:]?\*\*[:]? (.+)",
+        "Activity Level": r"[\*\-] \*\*Activity Level[:]?\*\*[:]? (.+)",
+        "Supplements": r"[\*\-] \*\*Supplements[:]?\*\*[:]? (.+)"
+    }
+    for label, pattern in fields.items():
+        match = re.search(pattern, content)
+        if not (match and match.group(1).strip()):
+            missing.append(label)
+    return missing
+
 async def auth(update: Update, context: ContextTypes.DEFAULT_TYPE):
     auth_mgr = context.bot_data.get("auth_manager")
     uid = update.effective_user.id
@@ -66,18 +83,14 @@ async def coach(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     user_agents[uid] = coach_agent
     
-    # Check if goal exists in profile
+    # Check if all fields exist in profile
     profile_path = Path(workspace) / f"USER-{uid}.md"
-    goal_set = False
-    if profile_path.exists():
-        content = profile_path.read_text()
-        match = re.search(r"- \*\*Bodybuilding Goal\*\*: (.+)", content)
-        if match and match.group(1).strip() and match.group(1).strip() != "(e.g., cutting, bulking, maintenance)":
-            goal_set = True
+    missing_fields = get_missing_coach_fields(profile_path)
     
-    if not goal_set:
+    if missing_fields:
         user_modes[uid] = "coach_pending_goal"
-        await update.message.reply_text("Coach mode activated! But first, I need to know your fitness goal (e.g., cutting, bulking, maintenance). Please tell me your goal.")
+        fields_str = ", ".join(missing_fields)
+        await update.message.reply_text(f"Coach mode activated! But first, I need your Bodybuilding Profile & Goals. Missing: {fields_str}. Please provide the missing information (you can do it one by one).")
     else:
         user_modes[uid] = "coach"
         await update.message.reply_text("Coach mode activated. Send me photos of your meals!")
@@ -104,11 +117,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if user_modes.get(uid) == "coach_pending_goal":
         if update.message.text:
-            prompt = f"The user is providing their bodybuilding goal: {update.message.text}. Use your write_profile tool to save this to their profile under 'Bodybuilding Goal'. Then confirm you are ready for meal images."
+            profile_path = Path(workspace) / f"USER-{uid}.md"
+            missing_before = get_missing_coach_fields(profile_path)
+            
+            prompt = f"The user is providing profile information: {update.message.text}. Use your write_profile tool to update their profile under 'My Bodybuilding Profile & Goals:'. The fields are: Current Stats, Goal, Activity Level, and Supplements. Only update the fields provided. Then, if any of these 4 fields are still missing (Missing: {', '.join(missing_before)}), acknowledge what you received and ask for the remaining ones. If all are filled, confirm you are ready for meal images."
             response = await user_agents[uid].chat(prompt)
-            user_modes[uid] = "coach"
+            
+            # Check again after AI processing
+            missing_after = get_missing_coach_fields(profile_path)
+            if not missing_after:
+                user_modes[uid] = "coach"
+            
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id, 
+                text=format_response(response),
+                parse_mode=constants.ParseMode.MARKDOWN_V2
+            )
+            return
         else:
-            await update.message.reply_text("Please provide your fitness goal as text first.")
+            await update.message.reply_text("Please provide your profile information as text first.")
             return
     elif update.message.photo:
         # Get the largest photo
