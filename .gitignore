@@ -12,3 +12,5 @@ tmp/
 authorized_users
 USER-*.md
 tokens
+INTAKE-*.json
+reminders.json

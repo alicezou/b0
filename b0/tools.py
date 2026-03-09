@@ -1,6 +1,7 @@
 import datetime
 import logging
 import requests
+import json
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -83,6 +84,85 @@ def get_weather(location: str):
         logger.error(f"Error fetching weather: {e}")
         return f"Error fetching weather: {str(e)}"
 
+def schedule_reminder(user_id: str, message: str, time_str: str, workspace: str = "."):
+    """Schedule a message to be sent at a specific time (HH:MM or YYYY-MM-DD HH:MM)."""
+    path = Path(workspace) / "reminders.json"
+    reminders = []
+    if path.exists():
+        try:
+            reminders = json.loads(path.read_text())
+        except:
+            reminders = []
+    
+    reminders.append({
+        "user_id": user_id,
+        "message": message,
+        "time": time_str,
+        "status": "pending"
+    })
+    path.write_text(json.dumps(reminders, indent=2))
+    return f"Reminder scheduled for {time_str}: {message}"
+
+def get_reminders(user_id: str, workspace: str = "."):
+    """List all pending reminders for the current user."""
+    path = Path(workspace) / "reminders.json"
+    if not path.exists(): return "No reminders found."
+    try:
+        reminders = json.loads(path.read_text())
+    except:
+        return "Error reading reminders."
+    user_rems = [r for r in reminders if r["user_id"] == user_id and r["status"] == "pending"]
+    if not user_rems: return "No pending reminders."
+    return "\n".join([f"- {r['time']}: {r['message']}" for r in user_rems])
+
+def log_intake(user_id: str, meal_description: str, calories: int, protein: int, carbs: int, fats: int, workspace: str = "."):
+    """Log a meal's nutritional information for the current user."""
+    path = Path(workspace) / f"INTAKE-{user_id}.json"
+    intake_data = []
+    if path.exists():
+        try:
+            intake_data = json.loads(path.read_text())
+        except:
+            intake_data = []
+    
+    intake_data.append({
+        "timestamp": datetime.datetime.now().isoformat(),
+        "meal": meal_description,
+        "calories": calories,
+        "protein": protein,
+        "carbs": carbs,
+        "fats": fats
+    })
+    path.write_text(json.dumps(intake_data, indent=2))
+    return f"Logged intake: {meal_description} ({calories} kcal, P: {protein}g, C: {carbs}g, F: {fats}g)"
+
+def get_daily_intake(user_id: str, workspace: str = "."):
+    """Retrieve and sum the nutritional intake for the current day."""
+    path = Path(workspace) / f"INTAKE-{user_id}.json"
+    if not path.exists(): return "No intake logged yet."
+    try:
+        intake_data = json.loads(path.read_text())
+    except:
+        return "Error reading intake data."
+    
+    today = datetime.datetime.now().date().isoformat()
+    daily_meals = [m for m in intake_data if m["timestamp"].startswith(today)]
+    
+    if not daily_meals: return "No intake logged for today."
+    
+    total_cals = sum(m["calories"] for m in daily_meals)
+    total_protein = sum(m["protein"] for m in daily_meals)
+    total_carbs = sum(m["carbs"] for m in daily_meals)
+    total_fats = sum(m["fats"] for m in daily_meals)
+    
+    summary = f"Daily Intake Summary ({today}):\n"
+    for m in daily_meals:
+        time = datetime.datetime.fromisoformat(m["timestamp"]).strftime("%H:%M")
+        summary += f"- {time}: {m['meal']} ({m['calories']} kcal)\n"
+    
+    summary += f"\nTOTALS:\n- Calories: {total_cals} kcal\n- Protein: {total_protein}g\n- Carbs: {total_carbs}g\n- Fats: {total_fats}g"
+    return summary
+
 # Tool definitions for LiteLLM
 TOOLS = [
     {
@@ -159,6 +239,61 @@ TOOLS = [
                 "required": ["location"]
             },
         },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "schedule_reminder",
+            "description": "Set a reminder message for a specific time (e.g. '12:30' or '2026-03-09 08:00')",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "message": {"type": "string", "description": "The reminder text"},
+                    "time_str": {"type": "string", "description": "Time in HH:MM or YYYY-MM-DD HH:MM format"}
+                },
+                "required": ["message", "time_str"]
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_reminders",
+            "description": "List all your current pending reminders",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "log_intake",
+            "description": "Log meal statistics (calories, macros) for the current day's tracking.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "meal_description": {"type": "string", "description": "Brief name of the meal/food"},
+                    "calories": {"type": "integer", "description": "Estimated calories"},
+                    "protein": {"type": "integer", "description": "Grams of protein"},
+                    "carbs": {"type": "integer", "description": "Grams of carbohydrates"},
+                    "fats": {"type": "integer", "description": "Grams of fats"}
+                },
+                "required": ["meal_description", "calories", "protein", "carbs", "fats"]
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_daily_intake",
+            "description": "Get a summary of everything you have eaten today and your total progress.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+            },
+        },
     }
 ]
 
@@ -170,4 +305,8 @@ TOOL_MAP = {
     "read_global_memory": read_global_memory,
     "write_global_memory": write_global_memory,
     "get_weather": get_weather,
+    "schedule_reminder": schedule_reminder,
+    "get_reminders": get_reminders,
+    "log_intake": log_intake,
+    "get_daily_intake": get_daily_intake,
 }

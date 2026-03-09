@@ -67,7 +67,7 @@ class Agent:
                 
                 if fn_name in TOOL_MAP:
                     # Inject context if the tool supports it
-                    if fn_name in ["read_profile", "write_profile"]:
+                    if fn_name in ["read_profile", "write_profile", "schedule_reminder", "get_reminders", "log_intake", "get_daily_intake"]:
                         fn_args["user_id"] = self.user_id
                         fn_args["workspace"] = str(self.workspace)
                     
