@@ -6,9 +6,6 @@ import json
 import os
 import sys
 
-# Ensure b0 is importable
-sys.path.append(os.getcwd())
-
 from b0 import telegram, agent, auth, tools
 
 class TestBotModes(unittest.IsolatedAsyncioTestCase):
