@@ -57,7 +57,7 @@ async def auth(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ident = auth_mgr.get_identifier(uid)
     
     if priv:
-        await update.message.reply_text(f"Authenticated as {priv}! Your identifier is {ident}")
+        await update.message.reply_text(f"Authenticated as {priv}! Your identifier is {ident}. There is a coach mode available via /coach.")
     else:
         await update.message.reply_text("Invalid or already used token.")
 
@@ -71,7 +71,7 @@ async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ident = auth_mgr.get_identifier(uid)
     user_agents[ident] = Agent(workspace=workspace, purpose=f"Chat {ident}", user_id=ident)
     user_modes[ident] = "normal"
-    await update.message.reply_text("Context flushed and returned to normal mode.")
+    await update.message.reply_text("Returned to normal mode. There is a coach mode available via /coach.")
 
 async def coach(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid, auth_mgr = update.effective_user.id, context.bot_data.get("auth_manager")
@@ -153,7 +153,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     workspace = context.bot_data.get("workspace", ".")
     ident = auth_mgr.get_identifier(uid)
     if ident not in user_agents:
-        user_agents[ident] = Agent(workspace=workspace, purpose=f"Chat {ident}", user_id=ident)
+        agent = Agent(workspace=workspace, purpose=f"Chat {ident}", user_id=ident)
+        # Session start hint for Normal Mode
+        if user_modes.get(ident) != "coach":
+            agent.messages.append({
+                "role": "system",
+                "content": "A new session has started. Be a professional assistant. Do NOT proactively mention bodybuilding goals or health status from the user's profile. Only say there is a specialized /coach mode available for bodybuilding and meal analysis."
+            })
+        user_agents[ident] = agent
     
     if user_modes.get(ident) == "coach_pending_goal":
         if update.message.text:
