@@ -96,10 +96,25 @@ async def coach(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if missing_fields:
         user_modes[ident] = "coach_pending_goal"
         fields_str = ", ".join(missing_fields)
-        await update.message.reply_text(f"Coach mode activated! But first, I need your Bodybuilding Profile & Goals. Missing: {fields_str}. Please provide the missing information (you can do it one by one).")
+        text = f"Coach mode activated! But first, I need your Bodybuilding Profile & Goals. Missing: {fields_str}. Please provide the missing information (you can do it one by one)."
+        
+        # If the agent has a language preference, translate the system message
+        if coach_agent.detected_lang and coach_agent.detected_lang.lower() not in ["english", "en"]:
+            translation_prompt = f"Translate the following system message into {coach_agent.detected_lang}. Keep it professional and helpful:\n\n{text}"
+            translated_text = await coach_agent.chat(translation_prompt)
+            await update.message.reply_text(format_response(translated_text), parse_mode=constants.ParseMode.MARKDOWN_V2)
+        else:
+            await update.message.reply_text(text)
     else:
         user_modes[ident] = "coach"
-        await update.message.reply_text("Coach mode activated. Send me photos of your meals!")
+        text = "Coach mode activated. Send me photos of your meals!"
+        
+        if coach_agent.detected_lang and coach_agent.detected_lang.lower() not in ["english", "en"]:
+            translation_prompt = f"Translate the following system message into {coach_agent.detected_lang}. Keep it professional and helpful:\n\n{text}"
+            translated_text = await coach_agent.chat(translation_prompt)
+            await update.message.reply_text(format_response(translated_text), parse_mode=constants.ParseMode.MARKDOWN_V2)
+        else:
+            await update.message.reply_text(text)
 
 async def exit_coach(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id

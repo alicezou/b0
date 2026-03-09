@@ -16,9 +16,12 @@ class Agent:
         self.user_id = user_id
         self.children = []
         self.messages = messages or []
+        self.detected_lang = None
         
         if not self.messages:
             self._init_context()
+        elif parent:
+            self.detected_lang = getattr(parent, 'detected_lang', None)
 
     def _init_context(self):
         """Loads workspace templates as system prompts if they exist."""
@@ -36,6 +39,7 @@ class Agent:
 
         template_names.append(user_file)
 
+        detected_lang = None
         for name in template_names:
             # RUNTIME-MEMORY.md is in the current dir; others are in workspace
             if name == "RUNTIME-MEMORY.md":
@@ -52,11 +56,13 @@ class Agent:
                     # This specifically looks for: **Preferred Language:** [value]
                     lang = re.search(r"\*\*Preferred Language[:]?\*\*[:]?[ \t]*([^\n\*]*)", content)
                     if lang and lang.group(1).strip():
-                        logger.info(f"Detected language preference in {path.name}: '{lang.group(1).strip()}'")
+                        self.detected_lang = lang.group(1).strip()
+                        logger.info(f"Detected language preference in {path.name}: '{self.detected_lang}'")
                 self.messages.append({"role": "system", "content": content})
 
     def fork(self, purpose: str = ""):
         child = Agent(workspace=str(self.workspace), messages=copy.deepcopy(self.messages), parent=self, purpose=purpose, user_id=self.user_id)
+        child.detected_lang = self.detected_lang
         self.children.append(child)
         return child
 
@@ -64,7 +70,16 @@ class Agent:
         self.messages.append({"role": "user", "content": content})
         
         while True:
-            message = await llm.complete(self.messages, tools=TOOLS)
+            # Dynamically inject language reinforcement as the last system message
+            # this ensures it remains high-priority even if other system prompts are added
+            llm_messages = self.messages[:]
+            if self.detected_lang:
+                llm_messages.append({
+                    "role": "system", 
+                    "content": f"IMPORTANT: Your response language MUST be {self.detected_lang}. All communication, analysis, and feedback must use this language strictly."
+                })
+            
+            message = await llm.complete(llm_messages, tools=TOOLS)
             if not message:
                 return "Error: LLM failed to respond."
             
@@ -88,6 +103,19 @@ class Agent:
                         fn_args["workspace"] = str(self.workspace)
                     
                     result = TOOL_MAP[fn_name](**fn_args)
+                    
+                    # Update local language preference if modified via tool
+                    if fn_name == "update_profile_field" and fn_args.get("field_name") == "Preferred Language":
+                        self.detected_lang = fn_args.get("new_value")
+                        logger.info(f"Agent state updated: language preference is now '{self.detected_lang}'")
+                    elif fn_name == "write_profile":
+                        # Attempt to re-extract language from full profile content
+                        import re
+                        lang_match = re.search(r"\*\*Preferred Language[:]?\*\*[:]?[ \t]*([^\n\*]*)", fn_args.get("content", ""))
+                        if lang_match and lang_match.group(1).strip():
+                            self.detected_lang = lang_match.group(1).strip()
+                            logger.info(f"Agent state updated via write_profile: language is now '{self.detected_lang}'")
+
                     self.messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
