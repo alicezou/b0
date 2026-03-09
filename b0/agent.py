@@ -32,15 +32,21 @@ class Agent:
         if self.user_id and not user_path.exists():
             template_content = resources.files("b0.templates").joinpath("USER.md").read_text()
             user_path.write_text(template_content)
-            logger.info(f"Created new user profile: {user_path}")
+            logger.info(f"Created new user profile: {user_path.absolute()}")
 
         template_names.append(user_file)
 
         for name in template_names:
             path = self.workspace / name
             if path.exists():
-                logger.info(f"Loading system prompt from {path}")
-                self.messages.append({"role": "system", "content": path.read_text()})
+                content = path.read_text()
+                logger.info(f"Loading system prompt from {path} (length: {len(content)})")
+                if "Preferred Language" in content:
+                    import re
+                    lang = re.search(r"Preferred Language:\s*(.*)", content)
+                    if lang:
+                        logger.info(f"Detected language preference in {path.name}: '{lang.group(1).strip()}'")
+                self.messages.append({"role": "system", "content": content})
 
     def fork(self, purpose: str = ""):
         child = Agent(workspace=str(self.workspace), messages=copy.deepcopy(self.messages), parent=self, purpose=purpose, user_id=self.user_id)
@@ -67,7 +73,7 @@ class Agent:
                 
                 if fn_name in TOOL_MAP:
                     # Inject context if the tool supports it
-                    if fn_name in ["read_profile", "write_profile", "schedule_reminder", "get_reminders", "log_intake", "get_daily_intake"]:
+                    if fn_name in ["read_profile", "write_profile", "schedule_reminder", "get_reminders", "log_intake", "get_daily_intake", "update_profile_field"]:
                         fn_args["user_id"] = self.user_id
                         fn_args["workspace"] = str(self.workspace)
                     

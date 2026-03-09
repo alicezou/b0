@@ -26,6 +26,40 @@ def write_profile(user_id: str, content: str, workspace: str = "."):
     logger.info(f"User profile updated: {filename}")
     return f"Successfully updated profile file: {filename}"
 
+def update_profile_field(user_id: str, field_name: str, new_value: str, workspace: str = "."):
+    """Update a specific field (e.g., 'Preferred Language') in the user's profile."""
+    content = read_profile(user_id, workspace)
+    import re
+    
+    # Try to find the field in various formats:
+    # 1. * **Field Name:** Value
+    # 2. * **Field Name** Value
+    # 3. - Field Name: Value
+    
+    patterns = [
+        (rf"(\* \*\*{re.escape(field_name)}[:]?\*\*[:]?\s*)(.*)", r"\1" + new_value),
+        (rf"(\-\s+\*\*{re.escape(field_name)}[:]?\*\*[:]?\s*)(.*)", r"\1" + new_value),
+        (rf"(\-\s+{re.escape(field_name)}[:]?\s+)(.*)", r"\1" + new_value)
+    ]
+    
+    updated = False
+    new_content = content
+    for pattern, replacement in patterns:
+        if re.search(pattern, content):
+            new_content = re.sub(pattern, replacement, content)
+            updated = True
+            break
+            
+    if not updated:
+        # If field doesn't exist, append it to a sensible section or just at the end
+        if "## Core Information" in content:
+            new_content = content.replace("## Core Information", f"## Core Information\n* **{field_name}:** {new_value}")
+        else:
+            new_content = content + f"\n* **{field_name}:** {new_value}"
+            
+    write_profile(user_id, new_content, workspace)
+    return f"Updated {field_name} to {new_value} in profile."
+
 def read_global_memory(workspace: str = "."):
     """Read the global memory file shared across all users."""
     path = Path(workspace) / "MEMORY.md"
@@ -243,6 +277,21 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "update_profile_field",
+            "description": "Update a specific field in the user's profile (e.g. 'Preferred Language', 'Goal')",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "field_name": {"type": "string", "description": "The exact name of the field to update"},
+                    "new_value": {"type": "string", "description": "The new value for the field"}
+                },
+                "required": ["field_name", "new_value"]
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "schedule_reminder",
             "description": "Set a reminder message for a specific time (e.g. '12:30' or '2026-03-09 08:00')",
             "parameters": {
@@ -309,4 +358,5 @@ TOOL_MAP = {
     "get_reminders": get_reminders,
     "log_intake": log_intake,
     "get_daily_intake": get_daily_intake,
+    "update_profile_field": update_profile_field,
 }

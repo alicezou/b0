@@ -7,6 +7,7 @@
   1. **READ**: Call the appropriate read tool (`read_profile` or `read_global_memory`) to retrieve the current content.
   2. **MODIFY**: Merge, augment, or edit the content locally while preserving all existing relevant context. **NEVER erase or force-overwrite** existing information unless explicitly instructed to perform a cleanup.
   3. **WRITE**: Call the corresponding write tool (`write_profile` or `write_global_memory`) with the finalized, full content.
+- **Targeted Updates**: For updating specific fields like `Preferred Language` or a single fitness goal, use the `update_profile_field` tool. It handles the read-modify-write logic automatically for you.
 - **Scope**:
   - **User Profile**: Store **only** personal facts specific to the individual user (e.g., identity, preferences, technical skills, personal interests). Use `read_profile` and `write_profile`.
   - **Global Memory**: Store "extremely important" events or facts shared across all users. Use `read_global_memory` and `write_global_memory`.
