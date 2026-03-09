@@ -25,7 +25,7 @@ rm -f INTAKE-*.json
 rm -f reminders.json
 rm -f authorized_users
 rm -f tokens
-rm -f MEMORY.md
+rm -f RUNTIME-MEMORY.md
 
 # Optional: Clean tmp directory if it exists
 if [ -d "tmp" ]; then

@@ -61,18 +61,18 @@ def update_profile_field(user_id: str, field_name: str, new_value: str, workspac
     return f"Updated {field_name} to {new_value} in profile."
 
 def read_global_memory(workspace: str = "."):
-    """Read the global memory file shared across all users."""
-    path = Path(workspace) / "MEMORY.md"
-    if not path.exists():
-        return "Global memory file not found."
-    return path.read_text()
+    """Read the runtime memory file from the current directory."""
+    runtime_path = Path("RUNTIME-MEMORY.md")
+    if not runtime_path.exists():
+        return "Runtime memory file not found."
+    return runtime_path.read_text()
 
 def write_global_memory(content: str, workspace: str = "."):
-    """Write or update the global memory file shared across all users."""
-    path = Path(workspace) / "MEMORY.md"
+    """Write or update the runtime memory file in the current directory."""
+    path = Path("RUNTIME-MEMORY.md")
     path.write_text(content)
-    logger.info("Global memory (MEMORY.md) updated")
-    return "Successfully updated global memory."
+    logger.info("Runtime memory (RUNTIME-MEMORY.md) updated in current directory")
+    return "Successfully updated runtime memory."
 
 def get_weather(location: str):
     """Get the current weather for a given location."""

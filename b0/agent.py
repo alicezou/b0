@@ -22,7 +22,7 @@ class Agent:
 
     def _init_context(self):
         """Loads workspace templates as system prompts if they exist."""
-        template_names = ["SOUL.md", "AGENT.md", "TOOLS.md", "MEMORY.md"]
+        template_names = ["SOUL.md", "AGENT.md", "TOOLS.md", "RUNTIME-MEMORY.md"]
         
         # Determine the user file name
         user_file = f"USER-{self.user_id}.md" if self.user_id else "USER.md"
@@ -37,7 +37,12 @@ class Agent:
         template_names.append(user_file)
 
         for name in template_names:
-            path = self.workspace / name
+            # RUNTIME-MEMORY.md is in the current dir; others are in workspace
+            if name == "RUNTIME-MEMORY.md":
+                path = Path(name)
+            else:
+                path = self.workspace / name
+            
             if path.exists():
                 content = path.read_text()
                 logger.info(f"Loading system prompt from {path} (length: {len(content)})")
