@@ -15,18 +15,17 @@ classifiers = [
 ]
 
 dependencies = [
-    "typer",
-    "python-dotenv",
-    "litellm",
-    "requests",
-    "python-telegram-bot",
-    "telegramify-markdown",
+    "typer==0.24.1",
+    "python-dotenv==1.2.2",
+    "litellm==1.82.0",
+    "requests==2.32.5",
+    "python-telegram-bot==22.6",
+    "telegramify-markdown==0.5.4",
 ]
 
 [project.optional-dependencies]
 test = [
-    "pytest",
-    "pytest-asyncio",
+    "pytest==9.0.2",
 ]
 
 [project.scripts]
