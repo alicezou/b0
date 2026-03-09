@@ -10,6 +10,7 @@ Information about the primary user of this agent.
 * **Goal:** 
 * **Activity Level:** 
 * **Supplements:** 
+* **Health Conditions:** 
 
 ## Preferences
 - **Communication Style**: (e.g., Casual, Formal, Technical)

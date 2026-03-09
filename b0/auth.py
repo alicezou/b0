@@ -17,7 +17,10 @@ class AuthManager:
             with open(self.auth_path, "r") as f:
                 for line in f:
                     p = line.split()
-                    if len(p) >= 2: users[int(p[0])] = p[1]
+                    if len(p) >= 3:
+                        users[int(p[0])] = {"priv": p[1], "token": p[2], "username": p[3] if len(p) > 3 else "unknown"}
+                    elif len(p) == 2:
+                        users[int(p[0])] = {"priv": p[1], "token": "legacy", "username": "legacy"}
         return users
 
     def _load_tokens(self):
@@ -46,8 +49,8 @@ class AuthManager:
     def _save_users(self):
         os.makedirs(self.workspace, exist_ok=True)
         with open(self.auth_path, "w") as f:
-            for uid, priv in self.users.items():
-                f.write(f"{uid} {priv}\n")
+            for uid, info in self.users.items():
+                f.write(f"{uid} {info['priv']} {info['token']} {info['username']}\n")
 
     def _save_tokens(self):
         os.makedirs(self.workspace, exist_ok=True)
@@ -60,12 +63,9 @@ class AuthManager:
     def is_authorized(self, uid: int) -> bool:
         return uid in self.users
 
-    def validate_token(self, token: str) -> bool:
-        return token in self.admin_tokens or token in self.user_tokens
-
-    def authorize(self, uid: int, token: str) -> str | None:
+    def authorize(self, uid: int, token: str, username: str = "unknown") -> str | None:
         if self.is_authorized(uid):
-            return self.users[uid]
+            return self.users[uid]["priv"]
 
         priv = None
         if token in self.admin_tokens:
@@ -77,15 +77,26 @@ class AuthManager:
         
         if priv:
             self._save_tokens()
-            self.users[uid] = priv
+            self.users[uid] = {"priv": priv, "token": token, "username": username}
             self._save_users()
             return priv
         
         return None
 
+    def get_identifier(self, uid: int) -> str:
+        info = self.users.get(uid)
+        if not info: return str(uid)
+        # Use first 8 chars of token for brevity but still unique
+        t_short = info["token"][:8] if info["token"] != "legacy" else "legacy"
+        username = info["username"] or "unknown"
+        return f"{username}-{t_short}"
+
     @property
     def tokens(self) -> list[str]:
         return self.admin_tokens + self.user_tokens
 
-    def get_privilege(self, uid: int) -> str:
-        return self.users.get(uid)
+    def get_privilege(self, uid: int) -> str | None:
+        info = self.users.get(uid)
+        if isinstance(info, dict):
+            return info["priv"]
+        return info # Legacy case
