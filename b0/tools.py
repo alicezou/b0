@@ -31,22 +31,24 @@ def update_profile_field(user_id: str, field_name: str, new_value: str, workspac
     content = read_profile(user_id, workspace)
     import re
     
-    # Try to find the field in various formats:
-    # 1. * **Field Name:** Value
-    # 2. * **Field Name** Value
-    # 3. - Field Name: Value
-    
+    # Enhanced patterns to match the field name and its (possibly empty or multiline) value
+    # We want to match the prefix and replace the entire line(s) associated with that field.
     patterns = [
-        (rf"(\* \*\*{re.escape(field_name)}[:]?\*\*[:]?\s*)(.*)", r"\1" + new_value),
-        (rf"(\-\s+\*\*{re.escape(field_name)}[:]?\*\*[:]?\s*)(.*)", r"\1" + new_value),
-        (rf"(\-\s+{re.escape(field_name)}[:]?\s+)(.*)", r"\1" + new_value)
+        # Match: * **Field Name:** [value] - handles case where colon is inside or outside stars
+        rf"(\* \*\*{re.escape(field_name)}[:]?\*\*[:]?[ \t]*)",
+        # Match: - **Field Name:** [value]
+        rf"(\-\s+\*\*{re.escape(field_name)}[:]?\*\*[:]?[ \t]*)",
+        # Match: - Field Name: [value]
+        rf"(\-\s+{re.escape(field_name)}[:]?[ \t]+)"
     ]
     
     updated = False
     new_content = content
-    for pattern, replacement in patterns:
-        if re.search(pattern, content):
-            new_content = re.sub(pattern, replacement, content)
+    for pattern in patterns:
+        match = re.search(pattern + r"(.*)", content)
+        if match:
+            # We replace the entire line including the existing value
+            new_content = re.sub(pattern + r".*", match.group(1) + new_value, content, count=1)
             updated = True
             break
             
@@ -58,6 +60,7 @@ def update_profile_field(user_id: str, field_name: str, new_value: str, workspac
             new_content = content + f"\n* **{field_name}:** {new_value}"
             
     write_profile(user_id, new_content, workspace)
+    logger.info(f"Updated field '{field_name}' to '{new_value}' for user {user_id}")
     return f"Updated {field_name} to {new_value} in profile."
 
 def read_global_memory(workspace: str = "."):

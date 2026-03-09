@@ -48,8 +48,10 @@ class Agent:
                 logger.info(f"Loading system prompt from {path} (length: {len(content)})")
                 if "Preferred Language" in content:
                     import re
-                    lang = re.search(r"Preferred Language:\s*(.*)", content)
-                    if lang:
+                    # Match "Preferred Language" inside bold markers, then capture value on the same line (allowing empty)
+                    # This specifically looks for: **Preferred Language:** [value]
+                    lang = re.search(r"\*\*Preferred Language[:]?\*\*[:]?[ \t]*([^\n\*]*)", content)
+                    if lang and lang.group(1).strip():
                         logger.info(f"Detected language preference in {path.name}: '{lang.group(1).strip()}'")
                 self.messages.append({"role": "system", "content": content})
 

@@ -158,7 +158,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user_modes.get(ident) != "coach":
             agent.messages.append({
                 "role": "system",
-                "content": "A new session has started. Be a professional assistant. Do NOT proactively mention bodybuilding goals or health status from the user's profile. Only say there is a specialized /coach mode available for bodybuilding and meal analysis."
+                "content": (
+                    "A new session has started. Be a professional assistant.\n\n"
+                    "CORE RULES:\n"
+                    "1. Always observe the 'Preferred Language' in the user's profile and respond in that language.\n"
+                    "2. If the user speaks a different language or requests one, immediately update the 'Preferred Language' field using update_profile_field.\n"
+                    "3. Proactively update other profile fields whenever you learn new personal facts.\n"
+                    "4. Do NOT proactively mention bodybuilding goals or health status in this Normal Mode. "
+                    "Only mention that a specialized /coach mode is available for bodybuilding and meal analysis."
+                )
             })
         user_agents[ident] = agent
     
